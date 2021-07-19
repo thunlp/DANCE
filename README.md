@@ -1,7 +1,7 @@
 # More Robust Dense Retrieval with Contrastive Dual Learning
 
 
-This repository provides the implementation code for the paper DANCE--[More Robust Dense Retrieval with Contrastive Dual Learning](paperlink). 
+This repository provides the implementation code for the paper DANCE--[More Robust Dense Retrieval with Contrastive Dual Learning](http://arxiv.org/abs/2107.07773). 
 
 Our code inherits from the repository [ANCE](https://github.com/microsoft/ANCE). While most of the settings should be the same as the original ANCE implementation, we add some code to conduct faster ANN search with GPUs, and to search through splitted shards of document embeddings for memory-saving purpose.
 
