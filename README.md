@@ -165,6 +165,67 @@ python -u -m torch.distributed.launch \
 
 The code for evaluation are in `evaluation/Calculate_Metrics.py`.
 
+## Inference for Custom MSMARCO-like Dataset 
+
+We provide codes for MSMARCO-like datasets.
+
+In such dataset, several files must be provided:
+- documents
+    - `[document collection.tsv]`: each line contains `[passage id]\t[text]\n` for the document texts. `[passage id]`s are in format "Dxxxxx", where "xxxxx" are integers.
+- files need be provided for each query set. (training, dev, eval, etc.)
+    - `[custom queries.tsv]`: `[query id]\t[text]\n` for lines. `[query id]` is also integers.
+    - `[custom qrels.tsv]`: `[query id] 0 [passage id] 1\n` for lines. This is optional because we may not have answers for the testset queries.
+
+Pre-processing:
+
+```shell
+python data/custom_data.py \
+--data_dir [raw tsv data folder] \
+--out_data_dir [processed data folder] \
+--model_type rdot_nll \
+--model_name_or_path roberta-base \
+--max_seq_length 512 \
+--data_type 0 \
+--doc_collection_tsv [doc text path] \
+--save_prefix [query saving name] \
+--query_collection_tsv [query text path] \
+--qrel_tsv [optional qrel tsv] \
+```
+
+You can specify a pytorch checkpoint and use it to inference the embeddings of the documents or queries.
+
+```shell
+python -u -m torch.distributed.launch \
+--nproc_per_node=[num GPU] --master_port=57135 ./drivers/run_ann_emb_inference.py \
+--model_type rdot_nll \
+--inference_type query --save_prefix [prefix of the query preprocessed file. eg., train] \
+--split_ann_search --gpu_index \
+--init_model_dir [checkpoint folder] \
+--data_dir [processed data folder] \
+--training_dir [task folder] \
+--output_dir [task folder]/ann_data/ \
+--cache_dir [task folder]/ann_data/cache/ \
+--max_query_length 64 --max_seq_length 512 --per_gpu_eval_batch_size 256
+```
+
+With using parameters `--inference_type query --save_prefix [prefix of the query preprocessed file. eg., train] \`, you can inference different sets of queries. 
+With using parameters `--inference_type document` and removing ` --save_prefix`, you can inference the document embeddings. 
+
+Next, you can use the following code to produce the trec format retrieval results of different query sets. Note that the embedding files will be matched by `emb_file_pattern = os.path.join(emb_dir,f'{emb_prefix}{checkpoint_postfix}__emb_p__data_obj_*.pb')`, check out how your embeddings are saved and specify the `checkpoint_postfix` for the program to load the embeddings.
+
+```shell
+python ./evaluation/retrieval.py \
+--trec_path [output trec path] \
+--emb_dir [folder dumpped query and passage/document embeddings which is output_dir, same as --output_dir above] \
+--checkpoint_postfix [checkpoint custom name] \
+--processed_data_dir [processed data folder] ] \
+--queryset_prefix [query saving name] \
+--gpu_index True --topN 100 --data_type 0 
+```
+
+Now you can play with the trec files and calculate different metrics .
+
+
 ## Checkpoints
 
 TODO: upload the checkpoints.
